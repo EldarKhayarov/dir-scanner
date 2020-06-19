@@ -21,8 +21,8 @@ class Server:
         :param port:
         :param host:
         """
-        self._port: int = port
-        self._host: str = host
+        self.port: int = port
+        self.host: str = host
         self._connections: list = []
         self._messages: list = []
 
@@ -52,7 +52,7 @@ class Server:
         Запуск сервера с использование хандлера _server_handler.
         :return:
         """
-        await websockets.serve(self._server_handler, self._host, self._port)
+        await websockets.serve(self._server_handler, self.host, self.port)
 
     async def send_message(self, message: str) -> None:
         """
