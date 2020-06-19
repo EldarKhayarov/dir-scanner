@@ -1,9 +1,18 @@
 import sys
 import os
 import asyncio
-import logging
 
 from server.server import Server
+
+
+def directory_validation(path: str) -> None:
+    if not os.path.isdir(path):
+        raise NotADirectoryError
+
+
+def port_validation(port: int) -> None:
+    if not 1 <= port <= 65535:
+        raise ValueError
 
 
 class Scanner:
@@ -25,6 +34,7 @@ class Scanner:
         return result
 
     async def _run_scanning(self) -> None:
+        print('Сканирование директории: ' + self.path)
         await self._send_message(
             'Запущен процесс сканирования директории ' + self.path
         )
@@ -51,12 +61,15 @@ class Scanner:
             old_dict = new_dict
             await asyncio.sleep(.1)
 
+    async def _start_server(self):
+        print(f'Старт сервера на {self.server.host}:{self.server.port}.')
+        await self.server.run_server()
+
     async def _run(self) -> None:
         # Одновременно запусаем и сервер, и сканнер.
-        await asyncio.gather(self._run_scanning(), self.server.run_server())
+        await asyncio.gather(self._run_scanning(), self._start_server())
 
     def run(self) -> None:
-        print('Старт сканирования.')
         try:
             asyncio.run(self._run())
         except KeyboardInterrupt:
@@ -69,12 +82,22 @@ def direct_run() -> None:
         # аргумента путь целевой директории.
         path = sys.argv[1]
         port = int(sys.argv[2])
+
+        directory_validation(path)
+        port_validation(port)
     except IndexError:
         print('Необходимо добаить путь до сканируемой папки первым аргументом'
               'и порт - вторым.')
+    except ValueError:
+        print('Порт невалиден.')
+    except NotADirectoryError:
+        print('Такой директории не существует.')
     else:
         scanner = Scanner(path, port)
-        scanner.run()
+        try:
+            scanner.run()
+        except OSError:
+            print('Данный порт занят.')
 
 
 if __name__ == '__main__':
