@@ -19,7 +19,7 @@ logger.addHandler(logger_handler)
 logger.setLevel(logging.INFO)
 
 
-def validate_ip(string: str) -> bool:
+def validate_ip(string: str) -> None:
     """
     Функция проверки валидности ip.
     :param string:
@@ -28,9 +28,17 @@ def validate_ip(string: str) -> bool:
     try:
         socket.inet_aton(string)
     except socket.error:
-        return False
-    else:
-        return True
+        raise ValueError('IP невалиден.')
+
+
+def validate_ips(ips: list) -> None:
+    """
+    Функция проверки валидности списка ip.
+    :param ips:
+    :return:
+    """
+    for ip in ips:
+        validate_ip(ip)
 
 
 def get_ips_from_file(path: str) -> list:
@@ -42,7 +50,7 @@ def get_ips_from_file(path: str) -> list:
     :return:
     """
     with open(path) as f:
-        return list([ip for ip in f.read().split('\n') if validate_ip(ip)])
+        return list([ip for ip in f.read().split('\n')])
 
 
 def get_scanner_ips() -> list:
@@ -66,7 +74,8 @@ class Client:
         """
         self.ips = ips
 
-    async def _connect_to_server(self, ip: str) -> None:
+    @staticmethod
+    async def _connect_to_server(ip: str) -> None:
         logger.info('Подключение к %s', ip)
         try:
             async with websockets.connect(WS_PROTOCOL_PREFIX + ip) as connection:
@@ -97,8 +106,13 @@ class Client:
 
 def direct_run() -> None:
     try:
+        ips = get_scanner_ips()
+        validate_ips(ips)
+
         client = Client(get_scanner_ips())
-    except KeyError as ex:
+    except (KeyError, ValueError) as ex:
+        # Секция, срабатывающая при отлавливании исключения, вызванного во
+        # время валидации адреса сервера(ов).
         print(str(ex).strip("'"))
     else:
         client.run()
